@@ -9,7 +9,11 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;700&display=swap">
 <style>
-  :root { color-scheme: light dark; }
+  :root {
+    color-scheme: light dark;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
   body { margin: 0; }
   img { max-width: 100%; }
   [hidden] { display: none !important; }
@@ -525,7 +529,6 @@
 </style>
 </head>
 <body>
-
 <div class="wrap">
 
   <header class="masthead">
@@ -828,6 +831,7 @@ codex  <span class="s">"Summarize the non-negotiables in AGENTS.md."</span></cod
   <footer>
     <p>Model IDs, pricing, and runtime limits were verified against current documentation in September 2026 and will drift. The <code>ultracode</code> mechanics reflect Claude Code v2.1.x; check the version floors before relying on any one flag.</p>
     <p>Anthropic pricing is first-party. OpenAI pricing is from a third-party reference — confirm it before budgeting.</p>
+    <p>Full chapters, the runnable scripts, and this page's source: <a href="https://github.com/speddiikga-code/interactive-playground">github.com/speddiikga-code/interactive-playground</a></p>
   </footer>
 
 </div>
