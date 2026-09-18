@@ -1,0 +1,969 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="A quickstart for orchestrating Claude Code and OpenAI Codex together, with a live task router.">
+<title>Ultracode Pipelines</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;700&display=swap">
+<style>
+  :root { color-scheme: light dark; }
+  body { margin: 0; }
+  img { max-width: 100%; }
+  [hidden] { display: none !important; }
+</style>
+<style>
+  :root {
+    --ground:      #F4F6F8;
+    --surface:     #FFFFFF;
+    --surface-2:   #EDF0F4;
+    --ink:         #121821;
+    --ink-2:       #3D4757;
+    --muted:       #67728A;
+    --line:        #D9DFE8;
+    --line-strong: #BCC5D3;
+
+    --claude:      #A8561F;
+    --claude-bg:   #FAEFE6;
+    --gpt:         #10736B;
+    --gpt-bg:      #E3F2F0;
+
+    --warn:        #8A5B00;
+    --warn-bg:     #FBF1DC;
+    --crit:        #9E2B20;
+    --crit-bg:     #FBE9E7;
+
+    --code-bg:     #161C27;
+    --code-ink:    #DCE3EE;
+    --code-dim:    #7C8AA3;
+
+    --display: "Bricolage Grotesque", "Trebuchet MS", sans-serif;
+    --body:    "Source Sans 3", system-ui, -apple-system, sans-serif;
+    --mono:    "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+    --rail: 15rem;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:      #0D1118;
+      --surface:     #151B25;
+      --surface-2:   #1D2530;
+      --ink:         #E8EDF5;
+      --ink-2:       #BAC4D3;
+      --muted:       #8894A8;
+      --line:        #29323F;
+      --line-strong: #3A4553;
+
+      --claude:      #E8996B;
+      --claude-bg:   #2C1B10;
+      --gpt:         #4FC2B6;
+      --gpt-bg:      #0E2B29;
+
+      --warn:        #E0B15B;
+      --warn-bg:     #2B2210;
+      --crit:        #F0897D;
+      --crit-bg:     #2E1512;
+
+      --code-bg:     #090D14;
+      --code-ink:    #DCE3EE;
+      --code-dim:    #6B7A93;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground:      #0D1118;
+    --surface:     #151B25;
+    --surface-2:   #1D2530;
+    --ink:         #E8EDF5;
+    --ink-2:       #BAC4D3;
+    --muted:       #8894A8;
+    --line:        #29323F;
+    --line-strong: #3A4553;
+
+    --claude:      #E8996B;
+    --claude-bg:   #2C1B10;
+    --gpt:         #4FC2B6;
+    --gpt-bg:      #0E2B29;
+
+    --warn:        #E0B15B;
+    --warn-bg:     #2B2210;
+    --crit:        #F0897D;
+    --crit-bg:     #2E1512;
+
+    --code-bg:     #090D14;
+    --code-ink:    #DCE3EE;
+    --code-dim:    #6B7A93;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--body);
+    font-size: 1.0625rem;
+    line-height: 1.62;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 78rem;
+    margin: 0 auto;
+    padding-inline: 16px;
+    padding-block: 0 4rem;
+    display: grid;
+    grid-template-columns: var(--rail) minmax(0, 1fr);
+    gap: 3.5rem;
+    align-items: start;
+  }
+
+  /* ---------- masthead ---------- */
+  .masthead {
+    grid-column: 1 / -1;
+    border-bottom: 1px solid var(--line);
+    padding-block: 3rem 2.25rem;
+  }
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: .7rem;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0 0 1rem;
+  }
+  h1 {
+    font-family: var(--display);
+    font-weight: 800;
+    font-size: clamp(2.4rem, 6.5vw, 4.1rem);
+    line-height: 1.02;
+    letter-spacing: -.028em;
+    margin: 0 0 1.1rem;
+    text-wrap: balance;
+  }
+  .standfirst {
+    font-size: clamp(1.1rem, 2.2vw, 1.3rem);
+    line-height: 1.5;
+    color: var(--ink-2);
+    max-width: 44ch;
+    margin: 0;
+  }
+  .standfirst b { color: var(--ink); font-weight: 600; }
+
+  /* ---------- rail ---------- */
+  .rail {
+    position: sticky;
+    top: calc(env(safe-area-inset-top, 0px) + 1.5rem);
+    font-size: .875rem;
+  }
+  .rail-title {
+    font-family: var(--mono);
+    font-size: .68rem;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0 0 .75rem;
+  }
+  .rail ol { list-style: none; margin: 0; padding: 0; display: grid; gap: .1rem; }
+  .rail a {
+    display: grid;
+    grid-template-columns: 1.6rem 1fr;
+    gap: .3rem;
+    padding: .3rem .4rem;
+    border-radius: 4px;
+    color: var(--ink-2);
+    text-decoration: none;
+    line-height: 1.35;
+  }
+  .rail a:hover { background: var(--surface-2); color: var(--ink); }
+  .rail .n { font-family: var(--mono); font-size: .72rem; color: var(--muted); padding-top: .12em; }
+
+  /* ---------- content ---------- */
+  main { min-width: 0; }
+  section { padding-block: 2.75rem 0; scroll-margin-top: 1.5rem; }
+  section > p, section > ul, section > ol { max-width: 66ch; }
+
+  h2 {
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: clamp(1.5rem, 3.4vw, 2rem);
+    letter-spacing: -.02em;
+    line-height: 1.14;
+    margin: 0 0 .3rem;
+    text-wrap: balance;
+  }
+  h2 .n {
+    font-family: var(--mono);
+    font-weight: 400;
+    font-size: .75rem;
+    color: var(--claude);
+    letter-spacing: .1em;
+    display: block;
+    margin-bottom: .45rem;
+  }
+  h3 {
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: 1.07rem;
+    letter-spacing: -.008em;
+    margin: 2rem 0 .5rem;
+  }
+  p { margin: 0 0 1rem; }
+  a { color: var(--claude); text-underline-offset: .18em; }
+  strong { font-weight: 600; }
+
+  code {
+    font-family: var(--mono);
+    font-size: .855em;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: .08em .34em;
+    word-break: break-word;
+  }
+
+  pre {
+    margin: 1.1rem 0;
+    background: var(--code-bg);
+    color: var(--code-ink);
+    border-radius: 8px;
+    padding: 1rem 1.1rem;
+    overflow-x: auto;
+    font-family: var(--mono);
+    font-size: .82rem;
+    line-height: 1.66;
+  }
+  pre code { background: none; border: 0; padding: 0; font-size: inherit; color: inherit; }
+  pre .c { color: var(--code-dim); }
+  pre .k { color: #E8996B; }
+  pre .s { color: #7FD1C4; }
+
+  /* ---------- tables ---------- */
+  .scroller { overflow-x: auto; margin: 1.2rem 0; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; }
+  th, td { text-align: left; padding: .62rem .8rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+  thead th {
+    font-family: var(--mono);
+    font-size: .68rem;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 400;
+    white-space: nowrap;
+    background: var(--surface-2);
+  }
+  tbody tr:last-child td { border-bottom: 0; }
+  td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .tag {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: .68rem;
+    padding: .12em .45em;
+    border-radius: 3px;
+    white-space: nowrap;
+  }
+  .tag.c { background: var(--claude-bg); color: var(--claude); }
+  .tag.g { background: var(--gpt-bg); color: var(--gpt); }
+
+  /* ---------- verdict cards ---------- */
+  .verdicts { display: grid; gap: .7rem; margin: 1.3rem 0; }
+  .verdict {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: .9rem;
+    align-items: start;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--line-strong);
+    border-radius: 6px;
+    padding: .85rem 1rem;
+  }
+  .verdict.real { border-left-color: var(--gpt); }
+  .verdict.fake { border-left-color: var(--crit); }
+  .verdict .mark {
+    font-family: var(--mono);
+    font-size: .68rem;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    padding: .2em .5em;
+    border-radius: 3px;
+    white-space: nowrap;
+    margin-top: .15rem;
+  }
+  .verdict.real .mark { background: var(--gpt-bg); color: var(--gpt); }
+  .verdict.fake .mark { background: var(--crit-bg); color: var(--crit); }
+  .verdict h4 { margin: 0 0 .2rem; font-family: var(--mono); font-size: .93rem; font-weight: 700; }
+  .verdict p { margin: 0; font-size: .93rem; color: var(--ink-2); }
+
+  /* ---------- stack diagram ---------- */
+  .stack { margin: 1.6rem 0; }
+  .layer {
+    display: grid;
+    grid-template-columns: 2.1rem 8.5rem 1fr;
+    gap: .9rem;
+    align-items: center;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: .7rem .9rem;
+    margin-bottom: .4rem;
+  }
+  .layer .ln { font-family: var(--mono); font-size: .72rem; color: var(--muted); }
+  .layer .lname { font-family: var(--display); font-weight: 600; font-size: .95rem; letter-spacing: -.01em; }
+  .layer .lfile { font-family: var(--mono); font-size: .8rem; color: var(--claude); }
+  .split {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: .6rem;
+    margin-top: .9rem;
+  }
+  .harness { border-radius: 6px; padding: .85rem 1rem; border: 1px solid var(--line); }
+  .harness.c { background: var(--claude-bg); border-color: var(--claude); }
+  .harness.g { background: var(--gpt-bg); border-color: var(--gpt); }
+  .harness h4 { margin: 0 0 .25rem; font-family: var(--display); font-size: .97rem; font-weight: 700; }
+  .harness.c h4 { color: var(--claude); }
+  .harness.g h4 { color: var(--gpt); }
+  .harness p { margin: 0; font-size: .85rem; color: var(--ink-2); }
+  .feeds {
+    text-align: center;
+    font-family: var(--mono);
+    font-size: .7rem;
+    color: var(--muted);
+    letter-spacing: .1em;
+    padding: .5rem 0 .1rem;
+  }
+
+  /* ---------- router tool ---------- */
+  .tool {
+    background: var(--surface);
+    border: 1px solid var(--line-strong);
+    border-radius: 10px;
+    padding: 1.2rem;
+    margin: 1.4rem 0;
+  }
+  .tool label {
+    display: block;
+    font-family: var(--mono);
+    font-size: .68rem;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: .5rem;
+  }
+  .tool textarea {
+    width: 100%;
+    font-family: var(--body);
+    font-size: 1rem;
+    line-height: 1.5;
+    color: var(--ink);
+    background: var(--ground);
+    border: 1px solid var(--line-strong);
+    border-radius: 6px;
+    padding: .7rem .8rem;
+    resize: vertical;
+    min-height: 4.4rem;
+  }
+  .tool textarea:focus-visible { outline: 2px solid var(--claude); outline-offset: 1px; }
+  .examples { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .7rem; }
+  .examples button {
+    font-family: var(--body);
+    font-size: .8rem;
+    color: var(--ink-2);
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: .25rem .7rem;
+    cursor: pointer;
+  }
+  .examples button:hover { border-color: var(--claude); color: var(--claude); }
+  .examples button:focus-visible { outline: 2px solid var(--claude); outline-offset: 1px; }
+
+  .result { margin-top: 1.1rem; border-top: 1px solid var(--line); padding-top: 1.1rem; }
+  .result-head { display: flex; flex-wrap: wrap; gap: .5rem; align-items: baseline; margin-bottom: .75rem; }
+  .route-badge {
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 1.22rem;
+    letter-spacing: -.015em;
+    padding: .1em .5em;
+    border-radius: 5px;
+  }
+  .route-badge[data-h="claude"] { background: var(--claude-bg); color: var(--claude); }
+  .route-badge[data-h="codex"]  { background: var(--gpt-bg);    color: var(--gpt); }
+  .route-badge[data-h="both"],
+  .route-badge[data-h="either"] { background: var(--surface-2); color: var(--ink); }
+  .effort {
+    font-family: var(--mono);
+    font-size: .78rem;
+    color: var(--muted);
+  }
+  .why { margin: 0 0 .85rem; padding: 0; list-style: none; display: grid; gap: .28rem; }
+  .why li {
+    font-size: .89rem;
+    color: var(--ink-2);
+    padding-left: 1rem;
+    position: relative;
+  }
+  .why li::before {
+    content: "·";
+    position: absolute;
+    left: .3rem;
+    color: var(--claude);
+    font-weight: 700;
+  }
+  .result pre { margin: 0 0 .7rem; }
+  .caution {
+    display: block;
+    background: var(--warn-bg);
+    color: var(--warn);
+    border-radius: 5px;
+    padding: .55rem .75rem;
+    font-size: .85rem;
+  }
+
+  /* ---------- callout ---------- */
+  .callout {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--warn);
+    border-radius: 6px;
+    padding: .9rem 1.1rem;
+    margin: 1.3rem 0;
+    font-size: .93rem;
+  }
+  .callout p { margin: 0 0 .5rem; }
+  .callout p:last-child { margin: 0; }
+  .callout .ctitle {
+    font-family: var(--mono);
+    font-size: .68rem;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--warn);
+    display: block;
+    margin-bottom: .35rem;
+  }
+
+  /* ---------- bites ---------- */
+  .bites { counter-reset: bite; display: grid; gap: .6rem; margin: 1.3rem 0; padding: 0; list-style: none; }
+  .bites li {
+    counter-increment: bite;
+    display: grid;
+    grid-template-columns: 1.9rem 1fr;
+    gap: .8rem;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: .8rem 1rem;
+    font-size: .93rem;
+    color: var(--ink-2);
+  }
+  .bites li::before {
+    content: counter(bite);
+    font-family: var(--mono);
+    font-size: .8rem;
+    color: var(--crit);
+    padding-top: .1rem;
+  }
+  .bites b { color: var(--ink); font-weight: 600; }
+
+  /* ---------- steps ---------- */
+  .steps { counter-reset: step; list-style: none; margin: 1.3rem 0; padding: 0; display: grid; gap: 1rem; }
+  .steps > li { counter-increment: step; display: grid; grid-template-columns: 1.7rem 1fr; gap: .9rem; }
+  .steps > li::before {
+    content: counter(step);
+    font-family: var(--mono);
+    font-size: .78rem;
+    color: var(--surface);
+    background: var(--ink);
+    width: 1.45rem; height: 1.45rem;
+    border-radius: 50%;
+    display: grid; place-items: center;
+    margin-top: .18rem;
+  }
+  .steps h3 { margin: 0 0 .25rem; font-size: 1rem; }
+  .steps p { margin: 0 0 .4rem; font-size: .93rem; }
+  .steps pre { margin: .5rem 0 0; }
+
+  footer {
+    grid-column: 1 / -1;
+    border-top: 1px solid var(--line);
+    margin-top: 3.5rem;
+    padding-top: 1.5rem;
+    font-size: .875rem;
+    color: var(--muted);
+  }
+  footer p { margin: 0 0 .5rem; max-width: 62ch; }
+
+  @media (max-width: 900px) {
+    .wrap { grid-template-columns: minmax(0, 1fr); gap: 0; }
+    .rail {
+      position: static;
+      border-bottom: 1px solid var(--line);
+      padding-block: 1.1rem;
+      margin-bottom: .5rem;
+    }
+    .rail ol {
+      grid-auto-flow: column;
+      grid-auto-columns: max-content;
+      overflow-x: auto;
+      gap: .35rem;
+      padding-bottom: .3rem;
+    }
+    .rail a { grid-template-columns: auto; white-space: nowrap; background: var(--surface-2); }
+    .rail .n { display: none; }
+    .split { grid-template-columns: 1fr; }
+    .layer { grid-template-columns: 1.7rem 1fr; }
+    .layer .lfile { grid-column: 2; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <p class="eyebrow">Agentic coding · orchestration</p>
+    <h1>Pipelining Claude&nbsp;and GPT</h1>
+    <p class="standfirst">You cannot merge the two harnesses. So <b>unify the four layers underneath them</b> — and let each agent be itself.</p>
+  </header>
+
+  <nav class="rail" aria-label="Contents">
+    <p class="rail-title">Contents</p>
+    <ol>
+      <li><a href="#naming"><span class="n">00</span><span>The naming, corrected</span></a></li>
+      <li><a href="#thesis"><span class="n">01</span><span>The four-layer thesis</span></a></li>
+      <li><a href="#router"><span class="n">02</span><span>Route your task</span></a></li>
+      <li><a href="#ladder"><span class="n">03</span><span>The ladder</span></a></li>
+      <li><a href="#ultracode"><span class="n">04</span><span>What ultracode does</span></a></li>
+      <li><a href="#limits"><span class="n">05</span><span>Hard edges</span></a></li>
+      <li><a href="#cost"><span class="n">06</span><span>Models &amp; cost</span></a></li>
+      <li><a href="#setup"><span class="n">07</span><span>30-minute setup</span></a></li>
+      <li><a href="#bites"><span class="n">08</span><span>What will bite you</span></a></li>
+    </ol>
+  </nav>
+
+  <main>
+
+    <section id="naming">
+      <h2><span class="n">00</span>The naming, corrected</h2>
+      <p>Three terms circulate loosely, and getting them straight changes the architecture — not just the vocabulary.</p>
+
+      <div class="verdicts">
+        <div class="verdict real">
+          <span class="mark">Real</span>
+          <div>
+            <h4>ultracode</h4>
+            <p>A <strong>Claude Code</strong> feature — both a keyword and an effort level, combining <code>xhigh</code> reasoning with automatic multi-agent <em>workflow</em> orchestration.</p>
+          </div>
+        </div>
+        <div class="verdict fake">
+          <span class="mark">Not a product</span>
+          <div>
+            <h4>GPT Ultra</h4>
+            <p>No OpenAI model ships under this name. The current frontier coding models are <strong>GPT‑6 Astra</strong> (<code>gpt-6-astra</code>, released 3 Sep 2026) and the <strong>GPT‑5.6</strong> family — Sol, Terra, Luna.</p>
+          </div>
+        </div>
+        <div class="verdict fake">
+          <span class="mark">Doesn't exist</span>
+          <div>
+            <h4>OpenAI ultracode</h4>
+            <p>Codex has no workflow-orchestration mode. Its nearest knob is <code>reasoning_effort = "xhigh"</code> — a deeper <em>single</em> agent loop, which is a different thing entirely.</p>
+          </div>
+        </div>
+      </div>
+
+      <p>So "run ultracode across both vendors" is not achievable as stated. A wrapper that pretends otherwise gives you the lowest common denominator — worse than either harness alone. What <em>is</em> achievable is below.</p>
+    </section>
+
+    <section id="thesis">
+      <h2><span class="n">01</span>The four-layer thesis</h2>
+      <p>Claude Code and Codex are different harnesses: different loop, tool names, permission model, context strategy. Don't abstract the harness. Unify the four layers around it — each one a single file.</p>
+
+      <div class="stack">
+        <div class="layer">
+          <span class="ln">L1</span>
+          <span class="lname">Instructions</span>
+          <span class="lfile">AGENTS.md &mdash; both read it natively</span>
+        </div>
+        <div class="layer">
+          <span class="ln">L2</span>
+          <span class="lname">Tools</span>
+          <span class="lfile">.mcp.json &mdash; both speak MCP</span>
+        </div>
+        <div class="layer">
+          <span class="ln">L3</span>
+          <span class="lname">Verification</span>
+          <span class="lfile">preflight.sh &mdash; neither may skip it</span>
+        </div>
+        <div class="layer">
+          <span class="ln">L4</span>
+          <span class="lname">Routing</span>
+          <span class="lfile">agent-route.mjs &mdash; picks the harness</span>
+        </div>
+
+        <p class="feeds">↓ &nbsp; feeds both &nbsp; ↓</p>
+
+        <div class="split">
+          <div class="harness c">
+            <h4>Claude Code</h4>
+            <p>Dynamic workflows, subagent fan-out, <code>ultracode</code>.</p>
+          </div>
+          <div class="harness g">
+            <h4>OpenAI Codex</h4>
+            <p><code>gpt-6-astra</code>, long-horizon runs, <code>reasoning_effort</code>.</p>
+          </div>
+        </div>
+      </div>
+
+      <p>Swap a harness out and three of the four layers are untouched. That is the whole integration — and the reason it survives the next model release.</p>
+    </section>
+
+    <section id="router">
+      <h2><span class="n">02</span>Route your task</h2>
+      <p>The most expensive habit in agentic coding is running everything at maximum effort. Describe a real task and see where it should go. This runs the same classification the repo's <code>agent-route.mjs</code> uses.</p>
+
+      <div class="tool">
+        <label for="task">Task description</label>
+        <textarea id="task" spellcheck="false">migrate every component under src/ to TypeScript, about 40 files</textarea>
+
+        <div class="examples" id="examples">
+          <button type="button" data-t="fix the typo in the contributing guide">typo fix</button>
+          <button type="button" data-t="add pagination to the search results endpoint">ordinary feature</button>
+          <button type="button" data-t="audit every route handler for missing auth checks and adversarially verify each finding">audit, verified</button>
+          <button type="button" data-t="rework the payment webhook signature verification">high blast radius</button>
+          <button type="button" data-t="drive the browser end-to-end through the long-running signup flow">computer use</button>
+        </div>
+
+        <div class="result" id="result" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <section id="ladder">
+      <h2><span class="n">03</span>The ladder</h2>
+      <p>Almost every costly mistake is using a rung higher than the task needs. Work up, never down.</p>
+
+      <div class="scroller">
+        <table>
+          <thead>
+            <tr><th>Rung</th><th>What it is</th><th>Use when</th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="num">1</td><td>Autocomplete</td><td>You know exactly what to type</td></tr>
+            <tr><td class="num">2</td><td>Single turn</td><td>The task fits in one reply</td></tr>
+            <tr><td class="num">3</td><td>Agent loop</td><td>Multi-step; needs to read and run things</td></tr>
+            <tr><td class="num">4</td><td><strong>Orchestration</strong> — a <em>script</em> spawns many agents</td><td>The same step repeats across many items</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>Rungs 1–3 are what both CLIs do out of the box. <strong>Rung 4 is what <code>ultracode</code> adds, and only Claude Code has it.</strong></p>
+    </section>
+
+    <section id="ultracode">
+      <h2><span class="n">04</span>What ultracode actually does</h2>
+      <p>It moves the plan <strong>out of the context window and into a script</strong>.</p>
+      <p>Normally Claude decides turn by turn what to do next, and every intermediate result lands in its context. A workflow is JavaScript that holds the loop, the branching, and the intermediate results itself — so the context holds only the final answer. That is what lets one run coordinate hundreds of agents instead of a handful.</p>
+
+      <pre><code><span class="k">export const</span> meta = { name: <span class="s">'audit-routes'</span>, description: <span class="s">'Auth check sweep'</span> }
+
+<span class="k">const</span> found = <span class="k">await</span> agent(<span class="s">'List every .ts file under src/routes/.'</span>, {
+  schema: { type: <span class="s">'object'</span>, required: [<span class="s">'files'</span>],
+            properties: { files: { type: <span class="s">'array'</span>, items: { type: <span class="s">'string'</span> } } } },
+})
+
+<span class="k">const</span> audits = <span class="k">await</span> pipeline(found.files, file =&gt;
+  agent(<span class="s">`Audit ${file} for missing authentication checks.`</span>, { label: file }),
+)
+
+<span class="k">return</span> audits.filter(Boolean)   <span class="c">// agent() resolves null when stopped</span></code></pre>
+
+      <p>The second, less obvious benefit: because the plan is code, it can encode a <strong>quality pattern</strong>. Independent agents can adversarially refute each other's findings before anything is reported — structurally more trustworthy than one confident pass.</p>
+
+      <h3>Three ways in</h3>
+      <pre><code>ultracode: &lt;task&gt;            <span class="c"># one task, this once</span>
+/effort ultracode            <span class="c"># this session, every substantive task</span>
+claude --effort ultracode    <span class="c"># start the session that way</span></code></pre>
+
+      <div class="callout">
+        <span class="ctitle">Security property, not a limitation</span>
+        <p>The keyword fires <strong>only from input you type yourself</strong> — not <code>claude -p</code>, not a scheduled task, not a webhook or PR comment (since v2.1.210).</p>
+        <p>Before that, it fired from all of them: a PR comment containing the word could spawn dozens of agents on your account. Leave that boundary alone.</p>
+      </div>
+
+      <h3>Four primitives, easily confused</h3>
+      <div class="scroller">
+        <table>
+          <thead>
+            <tr><th></th><th>Subagents</th><th>Skills</th><th>Agent teams</th><th>Workflows</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Who decides next</td><td>Claude, turn by turn</td><td>Claude</td><td>The lead agent</td><td><strong>The script</strong></td></tr>
+            <tr><td>Results live in</td><td>Context window</td><td>Context window</td><td>A shared task list</td><td><strong>Script variables</strong></td></tr>
+            <tr><td>What's repeatable</td><td>The worker def</td><td>The instructions</td><td>The team def</td><td><strong>The orchestration</strong></td></tr>
+            <tr><td>Scale</td><td>A few per turn</td><td>A few per turn</td><td>A handful of peers</td><td><strong>Dozens to hundreds</strong></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="limits">
+      <h2><span class="n">05</span>Hard edges</h2>
+      <p>These are not style preferences. Violate them and the run fails.</p>
+
+      <div class="scroller">
+        <table>
+          <thead><tr><th>Constraint</th><th>Consequence</th></tr></thead>
+          <tbody>
+            <tr><td><code>import()</code> is rejected</td><td>The script fails <strong>before the run starts</strong></td></tr>
+            <tr><td>No filesystem or shell from the script</td><td>Agents do that work; the script only coordinates</td></tr>
+            <tr><td><code>Date.now()</code>, <code>Math.random()</code>, bare <code>new Date()</code> <strong>throw</strong></td><td>So a resumed run replays identically — pass time via <code>args</code></td></tr>
+            <tr><td class="num">4,096 items</td><td>Max per <code>parallel()</code> / <code>pipeline()</code>; longer lists error</td></tr>
+            <tr><td class="num">1,000 agents</td><td>Per run — prevents runaway loops</td></tr>
+            <tr><td class="num">16 concurrent</td><td>Default; tune via <code>CLAUDE_CODE_WORKFLOW_MAX_CONCURRENT_AGENTS</code></td></tr>
+            <tr><td>No mid-run user input</td><td>For sign-off between stages, run each stage as its own workflow</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout">
+        <span class="ctitle">Found the hard way</span>
+        <p><code>node --check</code> <strong>cannot validate a workflow script.</strong> These files mix ESM <code>export</code> with top-level <code>await</code> <em>and</em> top-level <code>return</code> — valid in the workflow runtime, but in neither of Node's module modes.</p>
+        <p>Node's detection tries CommonJS, fails, tries ESM, fails, and then <strong>exits 0</strong>. A file with a genuine syntax error passes clean. Verified on Node v22.22.2. Strip the <code>meta</code> export and compile the body as an async function body instead.</p>
+      </div>
+    </section>
+
+    <section id="cost">
+      <h2><span class="n">06</span>Models &amp; cost</h2>
+
+      <div class="scroller">
+        <table>
+          <thead>
+            <tr><th>Model</th><th>ID</th><th>Context</th><th>In&nbsp;$/1M</th><th>Out&nbsp;$/1M</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><span class="tag c">Claude</span> Fable 5.1</td><td><code>claude-fable-5-1</code></td><td class="num">1M</td><td class="num">10.00</td><td class="num">50.00</td></tr>
+            <tr><td><span class="tag c">Claude</span> Opus 5</td><td><code>claude-opus-5</code></td><td class="num">1M</td><td class="num">5.00</td><td class="num">25.00</td></tr>
+            <tr><td><span class="tag c">Claude</span> Sonnet 5</td><td><code>claude-sonnet-5</code></td><td class="num">1M</td><td class="num">2.00</td><td class="num">10.00</td></tr>
+            <tr><td><span class="tag c">Claude</span> Haiku 4.5</td><td><code>claude-haiku-4-5</code></td><td class="num">200K</td><td class="num">1.00</td><td class="num">5.00</td></tr>
+            <tr><td><span class="tag g">OpenAI</span> GPT‑6 Astra</td><td><code>gpt-6-astra</code></td><td class="num">1.05M</td><td class="num">10.00</td><td class="num">50.00</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>Model IDs are complete as written — never append date suffixes. Anthropic figures are first-party rates; confirm the OpenAI numbers against their own pricing page before you budget on them.</p>
+
+      <div class="callout">
+        <span class="ctitle">The long-context premium</span>
+        <p>A large context window is <strong>not free just because your input fits in it.</strong> On <code>gpt-6-astra</code>, past <strong>272K tokens</strong> you pay 2× input and 1.5× output.</p>
+        <p>So context hygiene is a cost lever, not only a quality one — trimming 300K to 250K can more than halve the input bill.</p>
+      </div>
+
+      <h3>Free wins, before you touch effort</h3>
+      <ul>
+        <li><strong>Prompt caching.</strong> A prefix match — any byte change invalidates everything after it. Stable content first, volatile last. If <code>cache_read_input_tokens</code> is zero across repeated requests, something is silently invalidating.</li>
+        <li><strong>Workflow cache TTL.</strong> Workflow agents get <strong>5 minutes</strong> by default, separate from the main session. On a wide fan-out set <code>subagentPromptCacheTtl: "1h"</code>.</li>
+        <li><strong>Batch</strong> where latency doesn't matter — roughly 50% off on both sides.</li>
+      </ul>
+
+      <p>Judge <strong>cost per completed task</strong>, not per request. A cheaper request that needs three more rounds is not cheaper.</p>
+    </section>
+
+    <section id="setup">
+      <h2><span class="n">07</span>30-minute setup</h2>
+
+      <ol class="steps">
+        <li>
+          <div>
+            <h3>Install both CLIs</h3>
+            <p>Version floors matter: <code>ultracode</code> needs Claude Code v2.1.203+, and <code>gpt-6-astra</code> needs Codex v0.153.1+.</p>
+            <pre><code>npm install -g @anthropic-ai/claude-code
+npm install -g @openai/codex</code></pre>
+          </div>
+        </li>
+        <li>
+          <div>
+            <h3>Write the contract</h3>
+            <p>Every behavioral rule goes in <code>AGENTS.md</code>. <code>CLAUDE.md</code> is a pointer to it — a second copy is a second thing to forget to update. Rules must be specific and checkable: "exit code 0" is observable, "good code" isn't.</p>
+          </div>
+        </li>
+        <li>
+          <div>
+            <h3>Make the gate real</h3>
+            <p>The highest-leverage file. Both agents run it before pushing, and CI runs the identical script — so an agent cannot be "green locally, red in CI." One definition of green.</p>
+            <pre><code>./scripts/preflight.sh</code></pre>
+          </div>
+        </li>
+        <li>
+          <div>
+            <h3>Calibrate on one real task</h3>
+            <p>Give the same task to both and compare. Then ask both to restate the contract — if the summaries differ materially, your <code>AGENTS.md</code> is ambiguous. It's the cheapest eval you'll ever write.</p>
+            <pre><code>claude <span class="s">"Summarize the non-negotiables in AGENTS.md."</span>
+codex  <span class="s">"Summarize the non-negotiables in AGENTS.md."</span></code></pre>
+          </div>
+        </li>
+      </ol>
+    </section>
+
+    <section id="bites">
+      <h2><span class="n">08</span>What will bite you</h2>
+      <ol class="bites">
+        <li><b>The keyword only fires from human-typed input.</b> Not <code>-p</code>, not scheduled tasks, not webhooks or PR comments. Deliberate — otherwise a comment could spend $400 of your budget.</li>
+        <li><b>A failed agent reruns everything after it.</b> If a script starts A, B, C, D and B fails, relaunching returns A from cache and re-runs B, C, <em>and</em> D. Order expensive stages after cheap ones.</li>
+        <li><b>Workflow agents get a 5-minute cache TTL</b>, separate from your session. On a big fan-out you re-pay for the same prefix over and over.</li>
+        <li><b><code>temperature</code> and <code>top_p</code> are rejected</b> by current frontier reasoning models on both sides. Old scripts carrying them will 400. So will <code>reasoning_effort = "none"</code>.</li>
+        <li><b>The <code>Large workflow</code> warning is advisory and doesn't pause anything</b> — and sessions with ultracode on don't show it at all, because turning it on already opts you into large runs.</li>
+        <li><b>In auto permission mode with ultracode on, workflows start without asking.</b> Fine on a scratch repo; a poor fit for one holding production credentials.</li>
+      </ol>
+    </section>
+
+  </main>
+
+  <footer>
+    <p>Model IDs, pricing, and runtime limits were verified against current documentation in September 2026 and will drift. The <code>ultracode</code> mechanics reflect Claude Code v2.1.x; check the version floors before relying on any one flag.</p>
+    <p>Anthropic pricing is first-party. OpenAI pricing is from a third-party reference — confirm it before budgeting.</p>
+  </footer>
+
+</div>
+
+<script>
+  // Ported from scripts/agent-route.mjs so the page routes real tasks
+  // rather than describing routing in the abstract.
+  var FANOUT = [
+    /\bevery\b/i, /\ball\b\s+\w+\s+(files?|components?|routes?|handlers?|endpoints?|tests?)/i,
+    /\beach\b/i, /\bacross the (codebase|repo|project)\b/i, /\brepo-wide\b/i,
+    /\bmigrat(e|ing|ion)\b/i, /\baudit\b/i, /\bsweep\b/i, /\bin parallel\b/i
+  ];
+  var VERIFY = [
+    /\bcross-check\b/i, /\badversarial(ly)?\b/i, /\bverify\b/i, /\breview\b/i,
+    /\bsecond opinion\b/i, /\bresearch\b/i
+  ];
+  var LONGHORIZON = [
+    /\bcomputer use\b/i, /\bbrowser\b/i, /\bend-to-end\b/i, /\be2e\b/i,
+    /\blong-running\b/i, /\bscrape\b/i, /\bui automation\b/i
+  ];
+  var TRIVIAL = [
+    /\btypo\b/i, /\brename\b/i, /\bbump\b/i, /\bformat(ting)?\b/i,
+    /\bcomment\b/i, /\bone-?liner\b/i, /\bchangelog\b/i
+  ];
+  var RISKY = [
+    /\bauth(entication|orization)?\b/i, /\bsecurity\b/i, /\bpayment/i, /\bbilling\b/i,
+    /\bmigration\b/i, /\bschema\b/i, /\bcrypto/i, /\bsecret/i, /\bpermission/i
+  ];
+
+  function count(task, pats) {
+    var n = 0;
+    for (var i = 0; i < pats.length; i++) if (pats[i].test(task)) n++;
+    return n;
+  }
+
+  function statedScale(task) {
+    var m = task.match(/\b(\d{2,5})\s*(\+)?\s*(files?|components?|tests?|routes?)\b/i);
+    return m ? parseInt(m[1], 10) : null;
+  }
+
+  function route(task) {
+    var fanout = count(task, FANOUT),
+        verify = count(task, VERIFY),
+        longHorizon = count(task, LONGHORIZON),
+        trivial = count(task, TRIVIAL),
+        risky = count(task, RISKY),
+        scale = statedScale(task),
+        reasons = [];
+
+    if (trivial > 0 && fanout === 0 && scale === null) {
+      reasons.push('Trivial shape — frontier reasoning adds cost, not quality');
+      return { harness: 'either', effort: 'medium', reasons: reasons,
+               command: 'claude "<task>"   # or: codex "<task>"' };
+    }
+
+    if (fanout >= 2 || (scale !== null && scale >= 20) || (fanout >= 1 && verify >= 1)) {
+      reasons.push('Fan-out shape — many items treated the same way');
+      if (verify > 0) reasons.push('Verification requested — agents can adversarially check each other');
+      if (scale !== null) reasons.push('Stated scale ~' + scale + ' items');
+      reasons.push('Only Claude Code orchestrates this as a script');
+      return {
+        harness: 'claude', mode: 'ultracode', effort: 'xhigh', reasons: reasons,
+        command: 'ultracode: ' + task,
+        caution: (scale !== null && scale >= 100)
+          ? 'Large run. Try one directory first and set workflowSizeGuideline=small.'
+          : 'Watch /workflows for token spend; stop the run if it grows past expectations.'
+      };
+    }
+
+    if (longHorizon > 0) {
+      reasons.push('Long-horizon or computer-use shape');
+      reasons.push('gpt-6-astra is tuned for this, with 1.05M context for the trail');
+      return {
+        harness: 'codex', effort: 'high', reasons: reasons,
+        command: 'codex --model gpt-6-astra "' + task + '"',
+        caution: 'Past 272K tokens you pay 2× input / 1.5× output. Keep the context tight.'
+      };
+    }
+
+    if (risky > 0) {
+      reasons.push('High blast radius — an error here is expensive to unwind');
+      reasons.push('Two independent harnesses agreeing is far stronger evidence than one');
+      return {
+        harness: 'both', effort: 'high', reasons: reasons,
+        command: 'claude "' + task + '"\ncodex  "' + task + '"\n# then diff the two diffs'
+      };
+    }
+
+    reasons.push('Ordinary feature work — the default working mode');
+    return { harness: 'either', effort: 'high', reasons: reasons,
+             command: 'claude "<task>"   # or: codex "<task>"' };
+  }
+
+  var LABEL = { claude: 'Claude Code', codex: 'Codex', both: 'Both, then diff', either: 'Either' };
+
+  var taskEl = document.getElementById('task');
+  var resultEl = document.getElementById('result');
+
+  function esc(s) {
+    return String(s).replace(/[&<>"]/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+    });
+  }
+
+  function render() {
+    var task = taskEl.value.trim();
+    if (!task) {
+      resultEl.innerHTML = '<p class="effort">Describe a task above to see where it should go.</p>';
+      return;
+    }
+    var r = route(task);
+    var name = LABEL[r.harness] + (r.mode === 'ultracode' ? ' · ultracode' : '');
+
+    var html =
+      '<div class="result-head">' +
+        '<span class="route-badge" data-h="' + r.harness + '">' + esc(name) + '</span>' +
+        '<span class="effort">effort: ' + esc(r.effort) + '</span>' +
+      '</div><ul class="why">';
+
+    for (var i = 0; i < r.reasons.length; i++) html += '<li>' + esc(r.reasons[i]) + '</li>';
+    html += '</ul><pre><code>' + esc(r.command) + '</code></pre>';
+    if (r.caution) html += '<span class="caution">⚠ ' + esc(r.caution) + '</span>';
+
+    resultEl.innerHTML = html;
+  }
+
+  taskEl.addEventListener('input', render);
+
+  document.getElementById('examples').addEventListener('click', function (e) {
+    var b = e.target.closest('button[data-t]');
+    if (!b) return;
+    taskEl.value = b.getAttribute('data-t');
+    render();
+  });
+
+  render();
+</script>
+</body>
+</html>
