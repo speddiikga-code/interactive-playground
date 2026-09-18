@@ -1,0 +1,22 @@
+# Example ~/.codex/config.toml — Codex's half of the setup.
+# Copy to ~/.codex/config.toml and adjust. Codex reads AGENTS.md from the repo
+# root automatically, which is why the behavioral rules are not duplicated here.
+
+model = "gpt-6-astra"
+model_provider = "openai"
+
+# low | medium | high | xhigh   (Responses API also accepts "max")
+# Note: "none" is rejected at the API layer.
+reasoning_effort = "high"
+
+# Do NOT set temperature or top_p. Current frontier reasoning models reject them
+# on both vendors; scripts carrying them will 400.
+
+# Layer 2: the same MCP servers Claude Code gets from .mcp.json.
+[mcp_servers.filesystem]
+command = "npx"
+args = ["-y", "@modelcontextprotocol/server-filesystem", "."]
+
+[mcp_servers.git]
+command = "npx"
+args = ["-y", "@modelcontextprotocol/server-git", "--repository", "."]

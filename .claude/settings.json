@@ -1,0 +1,30 @@
+{
+  "$comment": "Project-level Claude Code settings. Committed, so the whole team gets the same defaults.",
+
+  "workflowSizeGuideline": "medium",
+
+  "$comment_cache": "Workflow agents get a 5-minute cache TTL by default, separate from the main session. On wide fan-outs that means re-paying for the same prefix repeatedly. 1h costs more per write and is worth it above roughly a dozen agents.",
+  "subagentPromptCacheTtl": "1h",
+
+  "$comment_ultracode": "Deliberately NOT setting \"ultracode\": true. That would run every substantive task in every session as a multi-agent workflow. Opt in per task with the `ultracode` keyword, or per session with /effort ultracode.",
+
+  "permissions": {
+    "allow": [
+      "Bash(./scripts/preflight.sh)",
+      "Bash(node scripts/check-workflows.mjs*)",
+      "Bash(node scripts/agent-route.mjs*)",
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log*)"
+    ],
+    "ask": [
+      "Bash(git push*)"
+    ],
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(./**/*.pem)",
+      "Read(./**/id_rsa*)"
+    ]
+  }
+}

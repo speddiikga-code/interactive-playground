@@ -1,0 +1,13 @@
+{
+  "$comment": "Layer 2 of the integration: one tool surface both harnesses speak. Claude Code reads .mcp.json natively; point Codex at the same servers in ~/.codex/config.toml (see docs/01-day-one-setup.md). Keeping one list means a tool added for one agent is available to the other.",
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "."]
+    },
+    "git": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-git", "--repository", "."]
+    }
+  }
+}
