@@ -1,0 +1,33 @@
+{
+  "$comment": "Company-level pipeline data. PUBLIC business information only — company names, their published titles, store metrics. NEVER put personal data here (names, emails, phone numbers, business cards). Korea's 개인정보보호법 governs that, and a git repo is the wrong place for it. Personal contacts go in contacts.local.json, which is gitignored.",
+  "stages": [
+    "identified",
+    "researched",
+    "audit_sent",
+    "replied",
+    "pilot",
+    "paid",
+    "retainer",
+    "dead"
+  ],
+  "targets": [
+    {
+      "company": "EXAMPLE Games Korea",
+      "hq": "CN",
+      "korean_entity": true,
+      "titles": [
+        "Example Title KR"
+      ],
+      "store_rating_kr": 3.8,
+      "loc_complaints_in_recent_reviews": 6,
+      "stage": "identified",
+      "markets": [
+        "KR",
+        "EN"
+      ],
+      "next_action": "Compare KR and EN builds for voice divergence",
+      "next_action_date": "2026-09-25",
+      "notes": "Placeholder row showing the shape. Replace with real research."
+    }
+  ]
+}

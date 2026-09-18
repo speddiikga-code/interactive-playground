@@ -16,3 +16,9 @@ id_rsa*
 .claude/settings.local.json
 
 .DS_Store
+
+# Personal contact data — NEVER commit.
+# Korea's 개인정보보호법 (PIPA) governs personal information; a git repo is the
+# wrong container for it (repos get forked, pushed and made public by accident).
+pipeline/contacts.local.json
+pipeline/*.local.json
