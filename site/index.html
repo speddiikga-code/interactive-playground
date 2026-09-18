@@ -340,6 +340,45 @@
     padding: .5rem 0 .1rem;
   }
 
+  /* ---------- three scales ---------- */
+  .scales { display: grid; gap: .5rem; margin: 1.5rem 0; }
+  .scale {
+    display: grid;
+    grid-template-columns: 4.2rem 1fr;
+    gap: 1rem;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--claude);
+    border-radius: 6px;
+    padding: .85rem 1rem;
+  }
+  .scale .yr {
+    font-family: var(--mono);
+    font-size: .8rem;
+    color: var(--claude);
+    font-variant-numeric: tabular-nums;
+    padding-top: .12rem;
+  }
+  .scale h4 {
+    margin: 0 0 .2rem;
+    font-family: var(--display);
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: -.01em;
+  }
+  .scale p { margin: 0 0 .35rem; font-size: .92rem; color: var(--ink-2); }
+  .scale .ext {
+    display: block;
+    font-family: var(--mono);
+    font-size: .74rem;
+    color: var(--muted);
+    letter-spacing: .04em;
+  }
+  .scale .ext b { color: var(--gpt); font-weight: 700; }
+  @media (max-width: 560px) {
+    .scale { grid-template-columns: 1fr; gap: .3rem; }
+  }
+
   /* ---------- router tool ---------- */
   .tool {
     background: var(--surface);
@@ -545,10 +584,11 @@
       <li><a href="#router"><span class="n">02</span><span>Route your task</span></a></li>
       <li><a href="#ladder"><span class="n">03</span><span>The ladder</span></a></li>
       <li><a href="#ultracode"><span class="n">04</span><span>What ultracode does</span></a></li>
-      <li><a href="#limits"><span class="n">05</span><span>Hard edges</span></a></li>
-      <li><a href="#cost"><span class="n">06</span><span>Models &amp; cost</span></a></li>
-      <li><a href="#setup"><span class="n">07</span><span>30-minute setup</span></a></li>
-      <li><a href="#bites"><span class="n">08</span><span>What will bite you</span></a></li>
+      <li><a href="#factory"><span class="n">05</span><span>Why this is a factory</span></a></li>
+      <li><a href="#limits"><span class="n">06</span><span>Hard edges</span></a></li>
+      <li><a href="#cost"><span class="n">07</span><span>Models &amp; cost</span></a></li>
+      <li><a href="#setup"><span class="n">08</span><span>30-minute setup</span></a></li>
+      <li><a href="#bites"><span class="n">09</span><span>What will bite you</span></a></li>
     </ol>
   </nav>
 
@@ -716,8 +756,81 @@ claude --effort ultracode    <span class="c"># start the session that way</span>
       </div>
     </section>
 
+    <section id="factory">
+      <h2><span class="n">05</span>Why this is a factory</h2>
+      <p>Not as a metaphor. The orchestration model on this page is the same move
+      industry made twice before, and seeing that makes the design decisions obvious
+      instead of arbitrary.</p>
+
+      <div class="scales">
+        <div class="scale">
+          <span class="yr">1835</span>
+          <div>
+            <h4>The relay</h4>
+            <p>Wire a relay's own contact back to its own coil and it holds itself on
+            after you let go of the button. A switch that remembers — one bit of
+            memory, built from a switch.</p>
+            <span class="ext">externalised: <b>state</b> — out of the operator's hand, into the circuit</span>
+          </div>
+        </div>
+        <div class="scale">
+          <span class="yr">1913</span>
+          <div>
+            <h4>The assembly line</h4>
+            <p>A craftsman holds the whole build in their head, so output is capped by
+            how much one expert can hold. A line encodes the sequence in its own
+            physical layout, so no single worker needs the whole plan.</p>
+            <span class="ext">externalised: <b>the plan</b> — out of one head, into the machinery</span>
+          </div>
+        </div>
+        <div class="scale">
+          <span class="yr">2026</span>
+          <div>
+            <h4>The workflow</h4>
+            <p>A conversational agent holds the plan in its context window, so scale is
+            capped by what fits there. A workflow script holds the loop, the branching
+            and the intermediate results, so the context holds only the answer.</p>
+            <span class="ext">externalised: <b>the plan</b> — out of the context window, into the script</span>
+          </div>
+        </div>
+      </div>
+
+      <p>Each step broke the same constraint: <strong>how much plan one mind can hold at
+      once.</strong> That's why a workflow coordinates hundreds of agents and a conversation
+      coordinates a handful — not more compute, just the plan living somewhere it can be
+      read back.</p>
+
+      <h3>The floor maps one to one</h3>
+
+      <div class="scroller">
+        <table>
+          <thead><tr><th>Factory floor</th><th>Workflow</th><th>What breaks without it</th></tr></thead>
+          <tbody>
+            <tr><td>Assembly line</td><td><code>pipeline()</code></td><td>One item at a time</td></tr>
+            <tr><td>Parallel stations</td><td><code>parallel()</code></td><td>Idle capacity</td></tr>
+            <tr><td>Production stage</td><td><code>phase()</code></td><td>No visibility into where work sits</td></tr>
+            <tr><td>Work-in-progress buffer</td><td>Script variables</td><td>Context fills with material nobody needs</td></tr>
+            <tr><td>Line capacity</td><td>16 concurrent agents</td><td>Contention, and a machine that falls over</td></tr>
+            <tr><td><strong>Separate QA station</strong></td><td><strong>The verify phase</strong></td><td><strong>The line certifies its own defects</strong></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>That last row is the one worth dwelling on. No factory lets the production line
+      inspect its own output — inspection is a separate station, staffed by people whose
+      job is to reject things, precisely because whoever built it is the worst person to
+      judge it. That is exactly why
+      <a href="https://github.com/speddiikga-code/interactive-playground">the review workflow</a>
+      hands each finding to a <em>different</em> agent and asks it to refute rather than
+      confirm. An agent grading its own work is a line inspecting its own parts.</p>
+
+      <p>The rest follows too. Resuming a stopped run replays completed agents from cache
+      and reruns everything after the failure — which is what restarting a line after a
+      jam actually costs, and why you order expensive stages after cheap ones.</p>
+    </section>
+
     <section id="limits">
-      <h2><span class="n">05</span>Hard edges</h2>
+      <h2><span class="n">06</span>Hard edges</h2>
       <p>These are not style preferences. Violate them and the run fails.</p>
 
       <div class="scroller">
@@ -743,7 +856,7 @@ claude --effort ultracode    <span class="c"># start the session that way</span>
     </section>
 
     <section id="cost">
-      <h2><span class="n">06</span>Models &amp; cost</h2>
+      <h2><span class="n">07</span>Models &amp; cost</h2>
 
       <div class="scroller">
         <table>
@@ -779,7 +892,7 @@ claude --effort ultracode    <span class="c"># start the session that way</span>
     </section>
 
     <section id="setup">
-      <h2><span class="n">07</span>30-minute setup</h2>
+      <h2><span class="n">08</span>30-minute setup</h2>
 
       <ol class="steps">
         <li>
@@ -815,7 +928,7 @@ codex  <span class="s">"Summarize the non-negotiables in AGENTS.md."</span></cod
     </section>
 
     <section id="bites">
-      <h2><span class="n">08</span>What will bite you</h2>
+      <h2><span class="n">09</span>What will bite you</h2>
       <ol class="bites">
         <li><b>The keyword only fires from human-typed input.</b> Not <code>-p</code>, not scheduled tasks, not webhooks or PR comments. Deliberate — otherwise a comment could spend $400 of your budget.</li>
         <li><b>A failed agent reruns everything after it.</b> If a script starts A, B, C, D and B fails, relaunching returns A from cache and re-runs B, C, <em>and</em> D. Order expensive stages after cheap ones.</li>
